@@ -124,7 +124,7 @@ tags: Computer Security
 
 ### Security Association Database
 
-- Defines the parameters associated with each SA.
+- Defines the parameters associated with each SA. 定義每個 SA 的參數
 - **Security Parameter Index**: selected by the receiving end of an SA to uniquely identify the SA.
   - Outbound SA: used to construct the packet's AH or ESP header.
   - Inbound SA: used to map traffic to the appropriate SA.
@@ -138,3 +138,62 @@ tags: Computer Security
 - **IPsec Protocol Mode**: Tunnel, transport, or wildcard.
 - **Path MTU**: Any observed path maximum transmission unit (maximum size of a packet that can
     be transmitted without fragmentation) and aging.
+
+### Security Policy Database
+
+- Which IP traffic is related to specifics SAs. 紀錄哪個 SA 對應哪個 IP
+- Each SPD entry is defined by a set of IP and upper-layer protocol field values
+    called *selectors*. In effect, these selectors are used to filter outgoing traffic
+    in order to map it into a particular SA.
+
+#### Outbound Processing
+
+1. Compare the values of the appropriate fields in the packet (the selector fields)
+against the SPD to find a matching SPD entry, which will point to zero or more SAs.
+2. Determine the SA if any for this packet and its associated SPI.
+3. Do the required IPsec processing (i.e., AH or ESP processing).
+
+#### Following selectors determine an SPD entry
+
+- **Remote IP Address**
+- **Local IP Address**
+- **Next Layer Protocol**
+- Name
+- Local and Remote Ports
+
+    ![SPD Examples](./image/SPD.png)
+
+### IP Traffic Processing
+
+- 先去 SPD 找 IP, 若有則繼續，沒有則丟棄。
+- 再看 policy, BYPASS, DISCASRD, PROTECT
+- PROTECT 再去看SAD
+
+#### Outbound Packets
+
+1. IPsec searches the SPD for a match to this packet.
+2. If no match is found, then the packet is discarded and an error message is generated.
+3. If a match is found, further processing is determined by the first matching entry in the SPD.
+If the policy for this packet is DISCASRD, then the packet is discarded. If the policy is BYPASS,
+then there is no further IPsec processing; the packet is forwarded to the network for transmission.
+4. If the policy is PROTECT, then a search is made of the SAD for a matching entry. If no entry is
+found, then IKE is invoked to create an SA with the appropriate keys and an entry is made in the SA.
+5. The matching entry in the SAD determines the processing for this packet.
+   - Encryption
+   - Authentication
+   - Transport
+   - Tunnel
+       ![Outbound](./image/Outbound.png)
+
+#### Inbound Packets
+
+1. Ipsec determines whether this is an unsecured IP packet or one that has ESP or AH headers/trailers,
+by examining the IP Protocol field (IPv4) or Next Header field (IPv6).
+2. If the packet is unsecured, IPsec searches the SPD for a match to this packet. If the first matching
+entry has a policy of BYPASS, the IP header is processed and stripped off and the packet body is delivered
+to the next higher layer, such TCP. If the first matching entry has a policy of PROTECT or DISCARD, or
+if there is no matching entry, the packet is discarded.
+3. For a secured packet, IPsec searches the SAD. If no match is found, the packet is discarded. Otherwise,
+IPsec applies the appropriate ESP or AH processing. Then, the IP header is processed and stripped off and
+the packet body is delivered to the next higher layer, such as TCP.
+![Inbound](img/image_2021-06-05-18-09-30.png)
