@@ -427,5 +427,4 @@ transport-layer segment.
   - 驗証彼此
   - set up a first IPsec SA
   - IPsec SA 用來保護原始訊息
-![Informational Exchange](img/Informational Exchange.png)
-
+![Information_Exchange](img/Information_Exchange.png)
